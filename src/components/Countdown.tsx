@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { playTick, resumeAudio } from "@/lib/sounds";
+import { playTick, playTickSoft, playTimesUp, resumeAudio } from "@/lib/sounds";
 
 type Props = {
   endsAt: number | null;
@@ -10,6 +10,7 @@ type Props = {
 export function Countdown({ endsAt }: Props) {
   const [now, setNow] = useState(() => Date.now());
   const prevSec = useRef<number | null>(null);
+  const timesUpFor = useRef<number | null>(null);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -23,11 +24,25 @@ export function Countdown({ endsAt }: Props) {
   useEffect(() => {
     if (!endsAt) {
       prevSec.current = null;
+      timesUpFor.current = null;
       return;
     }
-    if (prevSec.current !== null && left < prevSec.current && left <= 5 && left >= 1) {
+    if (left <= 0) {
+      if (timesUpFor.current !== endsAt) {
+        timesUpFor.current = endsAt;
+        resumeAudio();
+        playTimesUp();
+      }
+      prevSec.current = 0;
+      return;
+    }
+    if (prevSec.current !== null && left < prevSec.current) {
       resumeAudio();
-      playTick();
+      if (left <= 5 && left >= 1) {
+        playTick();
+      } else if (left <= 10 && left >= 6) {
+        playTickSoft();
+      }
     }
     prevSec.current = left;
   }, [endsAt, left]);

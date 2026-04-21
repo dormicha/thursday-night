@@ -8,6 +8,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+import { rollChaos, normalizeChaos } from "./chaos";
 import {
   MOST_LIKELY_QUESTIONS,
   TEN_SECOND_PROMPTS,
@@ -15,7 +16,7 @@ import {
   randomRoomCode,
 } from "./constants";
 import { scoreMostLikely, scoreStoryVotes, scoreTenSecond, scoreTrueFalse, mergeScores } from "./scoring";
-import type { GameData, GameId, Player, RoomDoc } from "./types";
+import type { ChaosRound, GameData, GameId, Player, RoomDoc } from "./types";
 import { GAME_ORDER } from "./types";
 
 /** Default countdown for most mini-games */
@@ -24,8 +25,56 @@ export const ROUND_MS = 18000;
 /** Extra time for Two Truths & a Lie (write + pick answers) */
 const TRUE_FALSE_ROUND_MS = 60_000;
 
-function roundDurationMs(gameId: GameId): number {
-  return gameId === "true_false" ? TRUE_FALSE_ROUND_MS : ROUND_MS;
+function roundDurationMs(gameId: GameId, chaos: ChaosRound): number {
+  let ms = gameId === "true_false" ? TRUE_FALSE_ROUND_MS : ROUND_MS;
+  if (chaos.event === "fast_mode") ms = Math.max(5000, Math.floor(ms / 2));
+  return ms;
+}
+
+function voteScoreOpts(chaos: ChaosRound) {
+  const rev = chaos.event === "reverse_votes";
+  const bonusTargetId = chaos.event === "bonus_target" ? chaos.bonusTargetId : undefined;
+  return { reverse: rev, bonusTargetId };
+}
+
+export function computeRoundDelta(
+  gameId: GameId,
+  gameData: GameData,
+  players: Player[],
+  chaos?: ChaosRound
+): Record<string, number> {
+  const c = normalizeChaos(chaos);
+  const vOpts = voteScoreOpts(c);
+  switch (gameId) {
+    case "most_likely":
+      return scoreMostLikely(gameData.votes, players, vOpts);
+    case "true_false":
+      return scoreTrueFalse(gameData.falseIndex, gameData.tfAnswers);
+    case "ten_second":
+      return scoreTenSecond(gameData.tenTexts);
+    case "story_chain":
+      return scoreStoryVotes(gameData.storyVotes, players, vOpts);
+    default:
+      return {};
+  }
+}
+
+function applyDoublePointsIfNeeded(delta: Record<string, number>, chaos: ChaosRound): Record<string, number> {
+  if (chaos.event !== "double_points") return delta;
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(delta)) {
+    out[k] = v * 2;
+  }
+  return out;
+}
+
+/** Delta actually applied to scores after chaos (e.g. ×2). Use for UI after reveal. */
+export function getRevealedRoundDelta(data: RoomDoc): Record<string, number> {
+  const gid = GAME_ORDER[data.roundIndex];
+  if (!gid) return {};
+  const chaos = normalizeChaos(data.chaosThisRound);
+  const raw = computeRoundDelta(gid, data.gameData, data.players, chaos);
+  return applyDoublePointsIfNeeded(raw, chaos);
 }
 
 function roomRef(roomId: string) {
@@ -109,6 +158,7 @@ export async function createRoom(hostId: string, nickname: string): Promise<stri
     step: "lobby",
     gameData: {},
     timerEndsAt: null,
+    chaosThisRound: { event: null },
     updatedAt: now,
   };
   await setDoc(roomRef(code), room);
@@ -141,12 +191,14 @@ export async function startGame(roomId: string) {
   if (!snap.exists()) return;
   const data = snap.data() as RoomDoc;
   const gid = GAME_ORDER[0]!;
+  const chaosThisRound = rollChaos(data.players);
   const gameData = initGameData(gid, data.players);
   await updateDoc(roomRef(roomId), {
     roundIndex: 0,
     step: "playing",
     gameData,
-    timerEndsAt: Date.now() + roundDurationMs(gid),
+    chaosThisRound,
+    timerEndsAt: Date.now() + roundDurationMs(gid, chaosThisRound),
     updatedAt: Date.now(),
   });
 }
@@ -165,12 +217,14 @@ export async function hostNextRound(roomId: string) {
     return;
   }
   const gid = GAME_ORDER[nextIdx]!;
+  const chaosThisRound = rollChaos(data.players);
   const gameData = initGameData(gid, data.players);
   await updateDoc(roomRef(roomId), {
     roundIndex: nextIdx,
     step: "playing",
     gameData,
-    timerEndsAt: Date.now() + roundDurationMs(gid),
+    chaosThisRound,
+    timerEndsAt: Date.now() + roundDurationMs(gid, chaosThisRound),
     updatedAt: Date.now(),
   });
 }
@@ -196,27 +250,11 @@ export async function applyRoundScores(roomId: string, delta: Record<string, num
   });
 }
 
-export function computeRoundDelta(gameId: GameId, gameData: GameData, players: Player[]): Record<string, number> {
-  switch (gameId) {
-    case "most_likely":
-      return scoreMostLikely(gameData.votes, players);
-    case "true_false":
-      return scoreTrueFalse(gameData.falseIndex, gameData.tfAnswers);
-    case "ten_second":
-      return scoreTenSecond(gameData.tenTexts);
-    case "story_chain":
-      return scoreStoryVotes(gameData.storyVotes, players);
-    default:
-      return {};
-  }
-}
-
 export async function hostRevealScores(roomId: string) {
   const snap = await getDoc(roomRef(roomId));
   if (!snap.exists()) return;
   const data = snap.data() as RoomDoc;
-  const gid = GAME_ORDER[data.roundIndex]!;
-  const delta = computeRoundDelta(gid, data.gameData, data.players);
+  const delta = getRevealedRoundDelta(data);
   await applyRoundScores(roomId, delta);
 }
 
@@ -234,6 +272,8 @@ export async function setVote(roomId: string, voterId: string, targetId: string)
   const snap = await getDoc(roomRef(roomId));
   if (!snap.exists()) return;
   const data = snap.data() as RoomDoc;
+  const chaos = normalizeChaos(data.chaosThisRound);
+  if (chaos.event === "mute_player" && voterId === chaos.mutedPlayerId) return;
   const votes = { ...data.gameData.votes, [voterId]: targetId };
   await updateDoc(roomRef(roomId), {
     gameData: { ...data.gameData, votes },
@@ -253,6 +293,8 @@ export async function setTfAnswer(roomId: string, playerId: string, idx: number)
   const snap = await getDoc(roomRef(roomId));
   if (!snap.exists()) return;
   const data = snap.data() as RoomDoc;
+  const chaos = normalizeChaos(data.chaosThisRound);
+  if (chaos.event === "mute_player" && playerId === chaos.mutedPlayerId) return;
   if (playerId === data.gameData.authorId) return;
   const tfAnswers = { ...data.gameData.tfAnswers, [playerId]: idx };
   await updateDoc(roomRef(roomId), {
@@ -297,6 +339,8 @@ export async function setStoryVote(roomId: string, voterId: string, targetId: st
   const snap = await getDoc(roomRef(roomId));
   if (!snap.exists()) return;
   const data = snap.data() as RoomDoc;
+  const chaos = normalizeChaos(data.chaosThisRound);
+  if (chaos.event === "mute_player" && voterId === chaos.mutedPlayerId) return;
   const storyVotes = { ...data.gameData.storyVotes, [voterId]: targetId };
   await updateDoc(roomRef(roomId), {
     gameData: { ...data.gameData, storyVotes },

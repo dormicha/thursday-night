@@ -1,8 +1,14 @@
 import type { GameId, Player } from "./types";
 
+export type VoteScoreOptions = {
+  reverse?: boolean;
+  bonusTargetId?: string;
+};
+
 export function scoreMostLikely(
   votes: Record<string, string> | undefined,
-  players: Player[]
+  players: Player[],
+  opts?: VoteScoreOptions
 ): Record<string, number> {
   const out: Record<string, number> = {};
   if (!votes || !players.length) return out;
@@ -10,15 +16,23 @@ export function scoreMostLikely(
   for (const target of Object.values(votes)) {
     tally[target] = (tally[target] ?? 0) + 1;
   }
-  let max = 0;
-  for (const id of Object.keys(tally)) {
-    max = Math.max(max, tally[id] ?? 0);
+  const keys = Object.keys(tally);
+  if (!keys.length) return out;
+  const reverse = !!opts?.reverse;
+  let extremum = reverse ? Infinity : 0;
+  for (const id of keys) {
+    const v = tally[id] ?? 0;
+    extremum = reverse ? Math.min(extremum, v) : Math.max(extremum, v);
   }
-  const winners = Object.keys(tally).filter((id) => tally[id] === max);
+  const winners = keys.filter((id) => (tally[id] ?? 0) === extremum);
   if (!winners.length) return out;
+  const bonusTargetId = opts?.bonusTargetId;
   for (const [voter, target] of Object.entries(votes)) {
     if (winners.includes(target)) {
       out[voter] = (out[voter] ?? 0) + 3;
+    }
+    if (bonusTargetId && target === bonusTargetId) {
+      out[voter] = (out[voter] ?? 0) + 2;
     }
   }
   return out;
@@ -51,7 +65,8 @@ export function scoreTenSecond(texts: Record<string, string> | undefined): Recor
 
 export function scoreStoryVotes(
   votes: Record<string, string> | undefined,
-  players: Player[]
+  players: Player[],
+  opts?: VoteScoreOptions
 ): Record<string, number> {
   const out: Record<string, number> = {};
   if (!votes || !players.length) return out;
@@ -59,13 +74,20 @@ export function scoreStoryVotes(
   for (const target of Object.values(votes)) {
     tally[target] = (tally[target] ?? 0) + 1;
   }
-  let max = 0;
-  for (const id of Object.keys(tally)) {
-    max = Math.max(max, tally[id] ?? 0);
+  const keys = Object.keys(tally);
+  if (!keys.length) return out;
+  const reverse = !!opts?.reverse;
+  let extremum = reverse ? Infinity : 0;
+  for (const id of keys) {
+    const v = tally[id] ?? 0;
+    extremum = reverse ? Math.min(extremum, v) : Math.max(extremum, v);
   }
-  const winners = Object.keys(tally).filter((id) => tally[id] === max);
+  const winners = keys.filter((id) => (tally[id] ?? 0) === extremum);
+  const bonusTargetId = opts?.bonusTargetId;
   for (const id of winners) {
-    out[id] = (out[id] ?? 0) + 4;
+    let pts = 4;
+    if (bonusTargetId && id === bonusTargetId) pts += 3;
+    out[id] = (out[id] ?? 0) + pts;
   }
   return out;
 }

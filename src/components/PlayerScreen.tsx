@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChaosBanner } from "@/components/ChaosBanner";
 import { Countdown } from "@/components/Countdown";
-import { gameLabel } from "@/lib/scoring";
+import { normalizeChaos } from "@/lib/chaos";
 import {
+  getRevealedRoundDelta,
   setStorySentence,
   setStoryVote,
   setTenText,
@@ -11,6 +13,8 @@ import {
   setTrueFalseStatements,
   setVote,
 } from "@/lib/room";
+import { gameLabel } from "@/lib/scoring";
+import { playButtonClick, playCorrect } from "@/lib/sounds";
 import type { RoomDoc } from "@/lib/types";
 import { GAME_ORDER } from "@/lib/types";
 
@@ -23,22 +27,41 @@ type Props = {
 export function PlayerScreen({ roomId, room, playerId }: Props) {
   const me = room.players.find((p) => p.id === playerId);
   const gid = GAME_ORDER[room.roundIndex];
+  const chaos = normalizeChaos(room.chaosThisRound);
   const [stmts, setStmts] = useState<[string, string, string]>(["", "", ""]);
   const [falseIx, setFalseIx] = useState(1);
   const [ten, setTen] = useState("");
   const [sentence, setSentence] = useState("");
+  const playedGainRef = useRef(false);
 
   const nickname = me?.nickname ?? "שחקן";
 
   const myVote = room.gameData.votes?.[playerId];
   const myTf = room.gameData.tfAnswers?.[playerId];
   const myStoryVote = room.gameData.storyVotes?.[playerId];
+  const muted =
+    chaos.event === "mute_player" && chaos.mutedPlayerId === playerId;
+  const bonusId = chaos.event === "bonus_target" ? chaos.bonusTargetId : undefined;
+
   const turnPid = useMemo(() => {
     const o = room.gameData.storyOrder;
     const t = room.gameData.storyTurn ?? 0;
     if (!o) return null;
     return o[t] ?? null;
   }, [room.gameData.storyOrder, room.gameData.storyTurn]);
+
+  useEffect(() => {
+    if (room.step !== "round_scores") {
+      playedGainRef.current = false;
+      return;
+    }
+    const delta = getRevealedRoundDelta(room);
+    const gain = delta[playerId] ?? 0;
+    if (gain > 0 && !playedGainRef.current) {
+      playedGainRef.current = true;
+      playCorrect();
+    }
+  }, [room.step, room, playerId]);
 
   if (!playerId) {
     return (
@@ -78,24 +101,43 @@ export function PlayerScreen({ roomId, room, playerId }: Props) {
       {room.step === "playing" && gid === "most_likely" && (
         <section className="mt-8 space-y-4">
           <h2 className="text-2xl font-black">{gameLabel("most_likely")}</h2>
+          <ChaosBanner chaos={chaos} players={room.players} />
           <p className="text-lg leading-snug text-violet-100/95">{room.gameData.question}</p>
-          <p className="text-sm text-violet-300/90">לחץ על מי שהכי מתאים.</p>
+          <p className="text-sm text-violet-300/90">
+            {chaos.event === "reverse_votes"
+              ? "לחץ על מי שהכי פחות מתאים (מנצח המיעוט!)."
+              : "לחץ על מי שהכי מתאים."}
+          </p>
+          {muted ? (
+            <p className="rounded-xl bg-rose-500/20 px-4 py-3 text-center text-rose-200">
+              כאוס: אתה מושתק בסיבוב הזה — בלי הצבעה.
+            </p>
+          ) : null}
           <div className="grid gap-2">
-            {room.players.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                disabled={!!myVote}
-                onClick={() => void setVote(roomId, playerId, p.id)}
-                className={`rounded-2xl py-4 text-lg font-bold transition active:scale-[0.99] ${
-                  myVote === p.id
-                    ? "bg-emerald-500 text-emerald-950"
-                    : "bg-white/10 hover:bg-white/15"
-                }`}
-              >
-                {p.nickname}
-              </button>
-            ))}
+            {room.players.map((p) => {
+              const isBonus = bonusId === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  disabled={!!myVote || muted}
+                  onClick={() => {
+                    playButtonClick();
+                    void setVote(roomId, playerId, p.id);
+                  }}
+                  className={`rounded-2xl py-4 text-lg font-bold transition active:scale-[0.99] ${
+                    myVote === p.id
+                      ? "bg-emerald-500 text-emerald-950"
+                      : isBonus
+                        ? "bg-amber-400/25 ring-2 ring-amber-300/70 hover:bg-amber-400/35"
+                        : "bg-white/10 hover:bg-white/15"
+                  }`}
+                >
+                  {p.nickname}
+                  {isBonus ? " ✨" : ""}
+                </button>
+              );
+            })}
           </div>
           {myVote ? (
             <p className="text-center text-emerald-300">נשמר — בחירה טובה.</p>
@@ -106,6 +148,12 @@ export function PlayerScreen({ roomId, room, playerId }: Props) {
       {room.step === "playing" && gid === "true_false" && (
         <section className="mt-8 space-y-4">
           <h2 className="text-2xl font-black">{gameLabel("true_false")}</h2>
+          <ChaosBanner chaos={chaos} players={room.players} />
+          {muted && room.gameData.authorId !== playerId ? (
+            <p className="rounded-xl bg-rose-500/20 px-4 py-3 text-center text-rose-200">
+              כאוס: אתה מושתק — לא ניתן לבחור תשובה בסיבוב הזה.
+            </p>
+          ) : null}
           {room.gameData.authorId === playerId ? (
             <>
               <p className="text-violet-100/90">כתוב שתי אמיתות ושקר אחד.</p>
@@ -138,9 +186,10 @@ export function PlayerScreen({ roomId, room, playerId }: Props) {
                 type="button"
                 className="w-full rounded-2xl bg-amber-400 py-4 text-lg font-bold text-amber-950 disabled:opacity-40"
                 disabled={room.gameData.sub !== "write"}
-                onClick={() =>
-                  void setTrueFalseStatements(roomId, stmts, falseIx as 0 | 1 | 2)
-                }
+                onClick={() => {
+                  playButtonClick();
+                  void setTrueFalseStatements(roomId, stmts, falseIx as 0 | 1 | 2);
+                }}
               >
                 נעל משפטים
               </button>
@@ -161,8 +210,11 @@ export function PlayerScreen({ roomId, room, playerId }: Props) {
                   <button
                     key={i}
                     type="button"
-                    disabled={myTf !== undefined || room.gameData.sub !== "pick"}
-                    onClick={() => void setTfAnswer(roomId, playerId, i)}
+                    disabled={myTf !== undefined || room.gameData.sub !== "pick" || muted}
+                    onClick={() => {
+                      playButtonClick();
+                      void setTfAnswer(roomId, playerId, i);
+                    }}
                     className={`rounded-2xl py-4 text-lg font-bold ${
                       myTf === i ? "bg-emerald-500 text-emerald-950" : "bg-white/10"
                     }`}
@@ -180,6 +232,7 @@ export function PlayerScreen({ roomId, room, playerId }: Props) {
       {room.step === "playing" && gid === "ten_second" && (
         <section className="mt-8 space-y-4">
           <h2 className="text-2xl font-black">{gameLabel("ten_second")}</h2>
+          <ChaosBanner chaos={chaos} players={room.players} />
           <p className="text-lg text-violet-100/95">{room.gameData.prompt}</p>
           <textarea
             className="min-h-[140px] w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-violet-400"
@@ -191,7 +244,10 @@ export function PlayerScreen({ roomId, room, playerId }: Props) {
             type="button"
             className="w-full rounded-2xl bg-violet-500 py-4 text-lg font-bold disabled:opacity-40"
             disabled={room.gameData.tenTexts?.[playerId] !== undefined || !ten.trim()}
-            onClick={() => void setTenText(roomId, playerId, ten)}
+            onClick={() => {
+              playButtonClick();
+              void setTenText(roomId, playerId, ten);
+            }}
           >
             שלח
           </button>
@@ -204,6 +260,7 @@ export function PlayerScreen({ roomId, room, playerId }: Props) {
       {room.step === "playing" && gid === "story_chain" && (
         <section className="mt-8 space-y-4">
           <h2 className="text-2xl font-black">{gameLabel("story_chain")}</h2>
+          <ChaosBanner chaos={chaos} players={room.players} />
           {room.gameData.sub === "write" && (
             <>
               {turnPid === playerId ? (
@@ -219,7 +276,10 @@ export function PlayerScreen({ roomId, room, playerId }: Props) {
                     type="button"
                     className="w-full rounded-2xl bg-fuchsia-500 py-4 text-lg font-bold disabled:opacity-40"
                     disabled={!sentence.trim() || !!room.gameData.sentences?.[playerId]}
-                    onClick={() => void setStorySentence(roomId, playerId, sentence.trim())}
+                    onClick={() => {
+                      playButtonClick();
+                      void setStorySentence(roomId, playerId, sentence.trim());
+                    }}
                   >
                     הוסף משפט
                   </button>
@@ -248,21 +308,41 @@ export function PlayerScreen({ roomId, room, playerId }: Props) {
           )}
           {room.gameData.sub === "vote" && (
             <>
-              <p className="text-lg text-violet-100/90">הצבע למשפט הכי טוב.</p>
+              <p className="text-lg text-violet-100/90">
+                {chaos.event === "reverse_votes"
+                  ? "הצבע למשפט שהכי פחות אהבת (מנצח המיעוט!)."
+                  : "הצבע למשפט הכי טוב."}
+              </p>
+              {muted ? (
+                <p className="rounded-xl bg-rose-500/20 px-4 py-3 text-center text-rose-200">
+                  כאוס: אתה מושתק — בלי הצבעה בסיבוב הזה.
+                </p>
+              ) : null}
               <div className="grid gap-2">
-                {room.players.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    disabled={!!myStoryVote}
-                    onClick={() => void setStoryVote(roomId, playerId, p.id)}
-                    className={`rounded-2xl py-4 text-lg font-bold ${
-                      myStoryVote === p.id ? "bg-emerald-500 text-emerald-950" : "bg-white/10"
-                    }`}
-                  >
-                    {p.nickname}
-                  </button>
-                ))}
+                {room.players.map((p) => {
+                  const isBonus = bonusId === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      disabled={!!myStoryVote || muted}
+                      onClick={() => {
+                        playButtonClick();
+                        void setStoryVote(roomId, playerId, p.id);
+                      }}
+                      className={`rounded-2xl py-4 text-lg font-bold ${
+                        myStoryVote === p.id
+                          ? "bg-emerald-500 text-emerald-950"
+                          : isBonus
+                            ? "bg-amber-400/25 ring-2 ring-amber-300/70"
+                            : "bg-white/10"
+                      }`}
+                    >
+                      {p.nickname}
+                      {isBonus ? " ✨" : ""}
+                    </button>
+                  );
+                })}
               </div>
               {myStoryVote ? <p className="text-emerald-300">ההצבעה נשמרה.</p> : null}
             </>

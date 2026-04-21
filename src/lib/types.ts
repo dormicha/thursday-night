@@ -14,6 +14,14 @@ export type GameId = (typeof GAME_ORDER)[number];
 
 export type RoomStep = "lobby" | "playing" | "round_scores" | "leaderboard" | "final";
 
+export type ChaosRound =
+  | { event: null }
+  | { event: "double_points" }
+  | { event: "reverse_votes" }
+  | { event: "fast_mode" }
+  | { event: "mute_player"; mutedPlayerId: string }
+  | { event: "bonus_target"; bonusTargetId: string };
+
 export type GameData = {
   /** most_likely */
   votes?: Record<string, string>;
@@ -42,6 +50,8 @@ export type RoomDoc = {
   roundIndex: number;
   step: RoomStep;
   gameData: GameData;
+  /** Active chaos modifiers for the current playing round */
+  chaosThisRound?: ChaosRound;
   timerEndsAt: number | null;
   updatedAt: number;
 };
