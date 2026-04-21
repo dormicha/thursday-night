@@ -18,7 +18,15 @@ import { scoreMostLikely, scoreStoryVotes, scoreTenSecond, scoreTrueFalse, merge
 import type { GameData, GameId, Player, RoomDoc } from "./types";
 import { GAME_ORDER } from "./types";
 
-const ROUND_MS = 18000;
+/** Default countdown for most mini-games */
+export const ROUND_MS = 18000;
+
+/** Extra time for Two Truths & a Lie (write + pick answers) */
+const TRUE_FALSE_ROUND_MS = 60_000;
+
+function roundDurationMs(gameId: GameId): number {
+  return gameId === "true_false" ? TRUE_FALSE_ROUND_MS : ROUND_MS;
+}
 
 function roomRef(roomId: string) {
   return doc(getDb(), "rooms", roomId);
@@ -138,7 +146,7 @@ export async function startGame(roomId: string) {
     roundIndex: 0,
     step: "playing",
     gameData,
-    timerEndsAt: Date.now() + ROUND_MS,
+    timerEndsAt: Date.now() + roundDurationMs(gid),
     updatedAt: Date.now(),
   });
 }
@@ -162,7 +170,7 @@ export async function hostNextRound(roomId: string) {
     roundIndex: nextIdx,
     step: "playing",
     gameData,
-    timerEndsAt: Date.now() + ROUND_MS,
+    timerEndsAt: Date.now() + roundDurationMs(gid),
     updatedAt: Date.now(),
   });
 }
@@ -296,4 +304,3 @@ export async function setStoryVote(roomId: string, voterId: string, targetId: st
   });
 }
 
-export { ROUND_MS };
