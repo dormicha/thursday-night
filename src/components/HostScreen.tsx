@@ -56,16 +56,16 @@ export function HostScreen({ roomId, room, isHost }: Props) {
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-violet-300/90">Thursday Night</p>
-          <h1 className="mt-1 text-4xl font-black md:text-5xl">Host screen</h1>
+          <h1 className="mt-1 text-4xl font-black md:text-5xl">מסך מנחה</h1>
           <p className="mt-2 text-lg text-violet-100/80">
-            Room <span className="font-mono text-2xl font-bold text-white">{roomId}</span>
+            חדר <span className="font-mono text-2xl font-bold text-white">{roomId}</span>
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
           {room.timerEndsAt && room.step === "playing" ? (
             <Countdown endsAt={room.timerEndsAt} />
           ) : (
-            <div className="text-sm text-violet-200/70">Timer paused</div>
+            <div className="text-sm text-violet-200/70">הטיימר מושהה</div>
           )}
         </div>
       </header>
@@ -73,18 +73,18 @@ export function HostScreen({ roomId, room, isHost }: Props) {
       <main className="mt-10 flex flex-1 flex-col gap-8">
         {room.step === "lobby" && (
           <section className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur">
-            <h2 className="text-3xl font-bold">Lobby</h2>
-            <p className="mt-2 text-xl text-violet-100/90">Players join on their phones with this code.</p>
+            <h2 className="text-3xl font-bold">לובי</h2>
+            <p className="mt-2 text-xl text-violet-100/90">השחקנים מצטרפים מהטלפון עם הקוד הזה.</p>
             <ul className="mt-6 grid gap-3 sm:grid-cols-2">
               {room.players.map((p) => (
                 <li
                   key={p.id}
-                  className="rounded-2xl bg-black/30 px-4 py-3 text-lg font-semibold ring-1 ring-white/10"
+                  className="flex flex-wrap items-center gap-2 rounded-2xl bg-black/30 px-4 py-3 text-lg font-semibold ring-1 ring-white/10"
                 >
-                  {p.nickname}
+                  <span>{p.nickname}</span>
                   {p.id === room.hostId ? (
-                    <span className="ml-2 rounded-full bg-amber-400/20 px-2 py-0.5 text-xs text-amber-200">
-                      host
+                    <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-xs text-amber-200">
+                      מנחה
                     </span>
                   ) : null}
                 </li>
@@ -97,7 +97,7 @@ export function HostScreen({ roomId, room, isHost }: Props) {
                 onClick={() => void startGame(roomId)}
                 disabled={room.players.length < 2}
               >
-                {room.players.length < 2 ? "Need at least 2 players" : "Start game"}
+                {room.players.length < 2 ? "נדרשים לפחות 2 שחקנים" : "התחל משחק"}
               </button>
             ) : null}
           </section>
@@ -106,14 +106,14 @@ export function HostScreen({ roomId, room, isHost }: Props) {
         {room.step === "playing" && gid && (
           <section className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur">
             <p className="text-sm font-semibold uppercase tracking-widest text-fuchsia-300">
-              Round {room.roundIndex + 1} / {GAME_ORDER.length}
+              סיבוב {room.roundIndex + 1} מתוך {GAME_ORDER.length}
             </p>
             <h2 className="mt-2 text-4xl font-black md:text-5xl">{gameLabel(gid)}</h2>
             <div className="mt-8 space-y-6 text-2xl font-medium leading-relaxed md:text-3xl">
               {gid === "most_likely" && (
                 <>
                   <p className="text-violet-100/90">{room.gameData.question}</p>
-                  <p className="text-lg text-violet-300/80">Players vote for who fits best.</p>
+                  <p className="text-lg text-violet-300/80">מצביעים למי שמתאים הכי הרבה.</p>
                 </>
               )}
               {gid === "draw_guess" && (
@@ -122,11 +122,11 @@ export function HostScreen({ roomId, room, isHost }: Props) {
                     {room.gameData.word?.toUpperCase()}
                   </p>
                   <p className="text-xl text-violet-200">
-                    Hint: {room.gameData.hint || "— waiting —"}
+                    רמז: {room.gameData.hint || "— מחכים —"}
                   </p>
                   {room.gameData.guessWinner ? (
                     <p className="animate-pulse text-2xl font-bold text-emerald-300">
-                      First match:{" "}
+                      ניחוש ראשון נכון:{" "}
                       {room.players.find((x) => x.id === room.gameData.guessWinner)?.nickname}
                     </p>
                   ) : null}
@@ -134,13 +134,13 @@ export function HostScreen({ roomId, room, isHost }: Props) {
               )}
               {gid === "true_false" && (
                 <>
-                  <ol className="list-decimal space-y-3 pl-10">
+                  <ol className="list-decimal space-y-3 pr-10">
                     {(room.gameData.statements ?? ["", "", ""]).map((s, i) => (
                       <li key={i}>{s || "…"}</li>
                     ))}
                   </ol>
                   <p className="text-lg text-violet-300">
-                    Don’t read answers aloud — let phones stay secret until the reveal.
+                    אל תקריא את התשובות בקול — בטלפונים זה נשאר סודי עד החשיפה.
                   </p>
                 </>
               )}
@@ -154,23 +154,23 @@ export function HostScreen({ roomId, room, isHost }: Props) {
                     {room.gameData.buzzN ?? 0}
                   </p>
                   <p className="text-xl text-violet-200">
-                    Press when the number is divisible by 7. One press each. Last correct buzz wins.
+                    לוחצים כשהמספר מתחלק ב־7. לחיצה אחת לכל אחד. הניחוש הנכון האחרון מנצח.
                   </p>
                 </>
               )}
               {gid === "ten_second" && (
                 <>
                   <p>{room.gameData.prompt}</p>
-                  <p className="text-lg text-violet-300">More words = more points (cap 20).</p>
+                  <p className="text-lg text-violet-300">יותר מילים = יותר נקודות (מקסימום 20).</p>
                 </>
               )}
               {gid === "story_chain" && (
                 <>
                   <p className="text-lg text-violet-200">
-                    Turn {Math.min((room.gameData.storyTurn ?? 0) + 1, room.gameData.storyOrder?.length ?? 0)} /{" "}
+                    תור {Math.min((room.gameData.storyTurn ?? 0) + 1, room.gameData.storyOrder?.length ?? 0)} מתוך{" "}
                     {room.gameData.storyOrder?.length ?? 0}
                   </p>
-                  <div className="rounded-2xl bg-black/30 p-6 text-left text-2xl leading-relaxed">
+                  <div className="rounded-2xl bg-black/30 p-6 text-right text-2xl leading-relaxed">
                     {(room.gameData.storyOrder ?? []).map((pid) => {
                       const p = room.players.find((x) => x.id === pid);
                       const s = room.gameData.sentences?.[pid];
@@ -194,7 +194,7 @@ export function HostScreen({ roomId, room, isHost }: Props) {
                     void hostRevealScores(roomId);
                   }}
                 >
-                  Reveal round scores
+                  חשוף נקודות סיבוב
                 </button>
               </div>
             ) : null}
@@ -203,10 +203,10 @@ export function HostScreen({ roomId, room, isHost }: Props) {
 
         {room.step === "round_scores" && (
           <section className="rounded-3xl border border-emerald-500/30 bg-emerald-950/40 p-8 shadow-[0_0_40px_rgba(16,185,129,0.15)]">
-            <h2 className="text-4xl font-black text-emerald-200">This round</h2>
+            <h2 className="text-4xl font-black text-emerald-200">הסיבוב הזה</h2>
             <ul className="mt-6 space-y-3 text-2xl">
               {Object.keys(roundDelta).length === 0 ? (
-                <li className="text-violet-200">No points this round.</li>
+                <li className="text-violet-200">אין נקודות בסיבוב הזה.</li>
               ) : (
                 Object.entries(roundDelta).map(([pid, pts]) => (
                   <li key={pid} className="flex justify-between gap-4">
@@ -222,7 +222,7 @@ export function HostScreen({ roomId, room, isHost }: Props) {
                 className="mt-8 rounded-2xl bg-white px-6 py-3 text-lg font-bold text-violet-900"
                 onClick={() => void goLeaderboard(roomId)}
               >
-                Show leaderboard
+                הצג לוח תוצאות
               </button>
             ) : null}
           </section>
@@ -230,7 +230,7 @@ export function HostScreen({ roomId, room, isHost }: Props) {
 
         {room.step === "leaderboard" && (
           <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
-            <h2 className="text-4xl font-black">Leaderboard</h2>
+            <h2 className="text-4xl font-black">לוח תוצאות</h2>
             <ol className="mt-6 space-y-3 text-2xl">
               {sortedPlayers(room).map((p, i) => (
                 <li
@@ -252,7 +252,7 @@ export function HostScreen({ roomId, room, isHost }: Props) {
                 className="mt-8 w-full max-w-md rounded-2xl bg-gradient-to-r from-fuchsia-500 to-violet-500 py-4 text-xl font-bold"
                 onClick={() => void hostNextRound(roomId)}
               >
-                {room.roundIndex >= GAME_ORDER.length - 1 ? "Finish game" : "Next round"}
+                {room.roundIndex >= GAME_ORDER.length - 1 ? "סיום משחק" : "סיבוב הבא"}
               </button>
             ) : null}
           </section>
@@ -260,12 +260,12 @@ export function HostScreen({ roomId, room, isHost }: Props) {
 
         {room.step === "final" && top && (
           <section className="flex flex-1 flex-col items-center justify-center text-center">
-            <p className="text-sm uppercase tracking-[0.4em] text-amber-200/90">Winner</p>
+            <p className="text-sm uppercase tracking-[0.4em] text-amber-200/90">מנצח</p>
             <h2 className="mt-4 animate-bounce text-6xl font-black text-amber-300 md:text-8xl">
               {top.nickname}
             </h2>
             <p className="mt-4 text-2xl text-violet-100/90">
-              {room.scores[top.id] ?? 0} points
+              {room.scores[top.id] ?? 0} נקודות
             </p>
           </section>
         )}

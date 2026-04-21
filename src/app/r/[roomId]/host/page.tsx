@@ -27,7 +27,7 @@ export default function HostPage() {
       <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-slate-950 px-4 text-center text-white">
         <p className="max-w-lg text-lg leading-relaxed text-red-200">{error}</p>
         <Link className="text-fuchsia-400 underline" href="/">
-          Back home
+          חזרה לדף הבית
         </Link>
       </div>
     );
@@ -36,7 +36,7 @@ export default function HostPage() {
   if (room === undefined) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-slate-950 text-white">
-        <p className="text-lg">Loading…</p>
+        <p className="text-lg">טוען…</p>
       </div>
     );
   }
@@ -44,9 +44,9 @@ export default function HostPage() {
   if (room === null) {
     return (
       <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-slate-950 px-4 text-center text-white">
-        <p className="text-lg">Room not found.</p>
+        <p className="text-lg">החדר לא נמצא.</p>
         <Link className="text-fuchsia-400 underline" href="/">
-          Back home
+          חזרה לדף הבית
         </Link>
       </div>
     );
@@ -55,7 +55,7 @@ export default function HostPage() {
   if (!playerId) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-slate-950 text-white">
-        <p className="text-lg">Loading…</p>
+        <p className="text-lg">טוען…</p>
       </div>
     );
   }

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Thursday Night",
-  description: "Lightweight real-time party game for friends in the same room.",
+  description: "משחק חברתי בזמן אמת — מסך אחד וטלפונים לכולם.",
 };
 
 export default function RootLayout({

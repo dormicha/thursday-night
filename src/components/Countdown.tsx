@@ -40,7 +40,7 @@ export function Countdown({ endsAt }: Props) {
         left <= 3 ? "scale-110 animate-pulse text-amber-300" : "text-white"
       }`}
     >
-      {left}s
+      {left} שנ׳
     </div>
   );
 }

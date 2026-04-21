@@ -37,7 +37,7 @@ export default function Home() {
       );
       router.push(`/r/${room}/host`);
     } catch (e) {
-      setErr(formatFirestoreError(e));
+      setErr(formatFirestoreError(e, "en"));
     } finally {
       setBusy(null);
     }
@@ -67,7 +67,7 @@ export default function Home() {
       await withTimeout(joinRoom(c, pid, joinNick.trim()), 25000, "Could not join the room.");
       router.push(`/r/${c}`);
     } catch (e) {
-      setErr(formatFirestoreError(e));
+      setErr(formatFirestoreError(e, "en"));
     } finally {
       setBusy(null);
     }
@@ -86,7 +86,7 @@ export default function Home() {
 
         {!configured ? (
           <>
-            <FirebaseMissing />
+            <FirebaseMissing locale="en" />
             <p className="text-center text-sm text-amber-200/90">
               Until Firebase is configured, the buttons below stay disabled.
             </p>

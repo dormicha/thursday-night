@@ -31,7 +31,7 @@ export function useRoom(roomId: string | undefined) {
         setRoom(data);
       },
       (err: FirestoreError) => {
-        setError(formatFirestoreError(err));
+        setError(formatFirestoreError(err, "he"));
         setRoom(null);
       }
     );

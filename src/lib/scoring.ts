@@ -96,12 +96,12 @@ export function mergeScores(
 
 export function gameLabel(id: GameId): string {
   const labels: Record<GameId, string> = {
-    most_likely: "Most Likely To",
-    draw_guess: "Draw & Guess",
-    true_false: "Two Truths & a Lie",
-    buzz: "Lucky 7 Buzz",
-    ten_second: "10 Second Challenge",
-    story_chain: "Story Chain",
+    most_likely: "הכי סביר ש…",
+    draw_guess: "רמז ונחש",
+    true_false: "שתי אמיתות ושקר",
+    buzz: "באז׳ מזל 7",
+    ten_second: "אתגר 10 שניות",
+    story_chain: "שרשרת סיפור",
   };
   return labels[id];
 }
