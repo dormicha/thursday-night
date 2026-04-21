@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { Countdown } from "@/components/Countdown";
 import { gameLabel } from "@/lib/scoring";
 import {
@@ -8,7 +7,6 @@ import {
   goLeaderboard,
   hostNextRound,
   hostRevealScores,
-  hostSetBuzzN,
   startGame,
 } from "@/lib/room";
 import { playSuccess } from "@/lib/sounds";
@@ -27,24 +25,6 @@ function sortedPlayers(room: RoomDoc) {
 
 export function HostScreen({ roomId, room, isHost }: Props) {
   const gid = GAME_ORDER[room.roundIndex];
-  const buzzRef = useRef(room.gameData.buzzN ?? 1);
-
-  useEffect(() => {
-    buzzRef.current = room.gameData.buzzN ?? 1;
-  }, [room.gameData.buzzN]);
-
-  useEffect(() => {
-    if (!isHost) return;
-    if (room.step !== "playing") return;
-    if (gid !== "buzz") return;
-    if (room.gameData.sub !== "run") return;
-    const id = window.setInterval(() => {
-      const n = (buzzRef.current ?? 0) + 1;
-      buzzRef.current = n;
-      void hostSetBuzzN(roomId, n);
-    }, 320);
-    return () => window.clearInterval(id);
-  }, [isHost, room.step, room.gameData.sub, gid, roomId]);
 
   const roundDelta =
     room.step === "round_scores" ? computeRoundDelta(gid, room.gameData, room.players) : {};
@@ -116,22 +96,6 @@ export function HostScreen({ roomId, room, isHost }: Props) {
                   <p className="text-lg text-violet-300/80">מצביעים למי שמתאים הכי הרבה.</p>
                 </>
               )}
-              {gid === "draw_guess" && (
-                <>
-                  <p className="text-5xl font-black text-amber-300 md:text-6xl">
-                    {room.gameData.word?.toUpperCase()}
-                  </p>
-                  <p className="text-xl text-violet-200">
-                    רמז: {room.gameData.hint || "— מחכים —"}
-                  </p>
-                  {room.gameData.guessWinner ? (
-                    <p className="animate-pulse text-2xl font-bold text-emerald-300">
-                      ניחוש ראשון נכון:{" "}
-                      {room.players.find((x) => x.id === room.gameData.guessWinner)?.nickname}
-                    </p>
-                  ) : null}
-                </>
-              )}
               {gid === "true_false" && (
                 <>
                   <ol className="list-decimal space-y-3 pr-10">
@@ -141,20 +105,6 @@ export function HostScreen({ roomId, room, isHost }: Props) {
                   </ol>
                   <p className="text-lg text-violet-300">
                     אל תקריא את התשובות בקול — בטלפונים זה נשאר סודי עד החשיפה.
-                  </p>
-                </>
-              )}
-              {gid === "buzz" && (
-                <>
-                  <p
-                    className={`text-7xl font-black tabular-nums md:text-9xl ${
-                      (room.gameData.buzzN ?? 0) % 7 === 0 ? "text-emerald-400 drop-shadow-[0_0_30px_rgba(52,211,153,0.8)]" : "text-white"
-                    }`}
-                  >
-                    {room.gameData.buzzN ?? 0}
-                  </p>
-                  <p className="text-xl text-violet-200">
-                    לוחצים כשהמספר מתחלק ב־7. לחיצה אחת לכל אחד. הניחוש הנכון האחרון מנצח.
                   </p>
                 </>
               )}

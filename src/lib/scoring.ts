@@ -36,19 +36,6 @@ export function scoreTrueFalse(
   return out;
 }
 
-export function scoreBuzz(
-  presses: Record<string, { n: number; t: number }> | undefined
-): Record<string, number> {
-  const out: Record<string, number> = {};
-  if (!presses) return out;
-  const correct = Object.entries(presses).filter(([, v]) => v.n % 7 === 0);
-  if (!correct.length) return out;
-  correct.sort((a, b) => a[1].t - b[1].t);
-  const last = correct[correct.length - 1]![0];
-  out[last] = 5;
-  return out;
-}
-
 export function scoreTenSecond(texts: Record<string, string> | undefined): Record<string, number> {
   const out: Record<string, number> = {};
   if (!texts) return out;
@@ -97,9 +84,7 @@ export function mergeScores(
 export function gameLabel(id: GameId): string {
   const labels: Record<GameId, string> = {
     most_likely: "הכי סביר ש…",
-    draw_guess: "רמז ונחש",
     true_false: "שתי אמיתות ושקר",
-    buzz: "באז׳ מזל 7",
     ten_second: "אתגר 10 שניות",
     story_chain: "שרשרת סיפור",
   };

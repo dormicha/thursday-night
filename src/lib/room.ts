@@ -9,13 +9,12 @@ import {
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import {
-  DRAW_WORDS,
   MOST_LIKELY_QUESTIONS,
   TEN_SECOND_PROMPTS,
   pick,
   randomRoomCode,
 } from "./constants";
-import { scoreBuzz, scoreMostLikely, scoreStoryVotes, scoreTenSecond, scoreTrueFalse, mergeScores } from "./scoring";
+import { scoreMostLikely, scoreStoryVotes, scoreTenSecond, scoreTrueFalse, mergeScores } from "./scoring";
 import type { GameData, GameId, Player, RoomDoc } from "./types";
 import { GAME_ORDER } from "./types";
 
@@ -60,16 +59,6 @@ function initGameData(gameId: GameId, players: Player[]): GameData {
         votes: {},
         sub: "vote",
       };
-    case "draw_guess": {
-      const drawerId = pick(ids);
-      return {
-        drawerId,
-        word: pick(DRAW_WORDS),
-        hint: "",
-        guesses: {},
-        sub: "hint",
-      };
-    }
     case "true_false": {
       const authorId = pick(ids);
       return {
@@ -80,12 +69,6 @@ function initGameData(gameId: GameId, players: Player[]): GameData {
         sub: "write",
       };
     }
-    case "buzz":
-      return {
-        buzzN: 1,
-        buzzPresses: {},
-        sub: "run",
-      };
     case "ten_second":
       return {
         prompt: pick(TEN_SECOND_PROMPTS),
@@ -209,16 +192,8 @@ export function computeRoundDelta(gameId: GameId, gameData: GameData, players: P
   switch (gameId) {
     case "most_likely":
       return scoreMostLikely(gameData.votes, players);
-    case "draw_guess": {
-      const out: Record<string, number> = {};
-      const w = gameData.guessWinner;
-      if (w) out[w] = 8;
-      return out;
-    }
     case "true_false":
       return scoreTrueFalse(gameData.falseIndex, gameData.tfAnswers);
-    case "buzz":
-      return scoreBuzz(gameData.buzzPresses);
     case "ten_second":
       return scoreTenSecond(gameData.tenTexts);
     case "story_chain":
@@ -256,34 +231,6 @@ export async function setVote(roomId: string, voterId: string, targetId: string)
     gameData: { ...data.gameData, votes },
     updatedAt: Date.now(),
   });
-}
-
-export async function setGuess(roomId: string, playerId: string, text: string) {
-  const snap = await getDoc(roomRef(roomId));
-  if (!snap.exists()) return;
-  const data = snap.data() as RoomDoc;
-  const guesses = { ...data.gameData.guesses, [playerId]: text };
-  const word = data.gameData.word?.toLowerCase().trim();
-  const g = text.toLowerCase().trim();
-  const patch: GameData = { ...data.gameData, guesses };
-  const isDrawer = playerId === data.gameData.drawerId;
-  if (
-    word &&
-    g === word &&
-    !isDrawer &&
-    !data.gameData.guessWinner
-  ) {
-    patch.guessWinner = playerId;
-    patch.sub = "done";
-  }
-  await updateDoc(roomRef(roomId), {
-    gameData: patch,
-    updatedAt: Date.now(),
-  });
-}
-
-export async function setHint(roomId: string, hint: string) {
-  await updateGameData(roomId, { hint, sub: "guess" });
 }
 
 export async function setTrueFalseStatements(
@@ -347,24 +294,6 @@ export async function setStoryVote(roomId: string, voterId: string, targetId: st
     gameData: { ...data.gameData, storyVotes },
     updatedAt: Date.now(),
   });
-}
-
-export async function buzzPress(roomId: string, playerId: string, n: number) {
-  const snap = await getDoc(roomRef(roomId));
-  if (!snap.exists()) return;
-  const data = snap.data() as RoomDoc;
-  const prev = data.gameData.buzzPresses?.[playerId];
-  const t = Date.now();
-  if (prev) return;
-  const buzzPresses = { ...data.gameData.buzzPresses, [playerId]: { n, t } };
-  await updateDoc(roomRef(roomId), {
-    gameData: { ...data.gameData, buzzPresses },
-    updatedAt: Date.now(),
-  });
-}
-
-export async function hostSetBuzzN(roomId: string, n: number) {
-  await updateGameData(roomId, { buzzN: n });
 }
 
 export { ROUND_MS };

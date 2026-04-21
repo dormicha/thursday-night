@@ -5,9 +5,7 @@ export type Player = {
 
 export const GAME_ORDER = [
   "most_likely",
-  "draw_guess",
   "true_false",
-  "buzz",
   "ten_second",
   "story_chain",
 ] as const;
@@ -20,20 +18,11 @@ export type GameData = {
   /** most_likely */
   votes?: Record<string, string>;
   question?: string;
-  /** draw_guess */
-  drawerId?: string;
-  word?: string;
-  hint?: string;
-  guesses?: Record<string, string>;
-  guessWinner?: string;
   /** true_false */
   authorId?: string;
   statements?: [string, string, string];
   falseIndex?: number;
   tfAnswers?: Record<string, number>;
-  /** buzz */
-  buzzN?: number;
-  buzzPresses?: Record<string, { n: number; t: number }>;
   /** ten_second */
   prompt?: string;
   tenTexts?: Record<string, string>;

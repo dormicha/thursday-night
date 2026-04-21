@@ -80,7 +80,7 @@ export default function Home() {
           <p className="text-sm uppercase tracking-[0.35em] text-violet-300/90">Party game</p>
           <h1 className="mt-3 text-5xl font-black tracking-tight md:text-6xl">Thursday Night</h1>
           <p className="mt-4 text-lg text-violet-100/85">
-            One TV, phones for everyone. Six quick rounds. No accounts — just nicknames.
+            One TV, phones for everyone. Four quick rounds. No accounts — just nicknames.
           </p>
         </div>
 

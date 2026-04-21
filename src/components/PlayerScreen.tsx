@@ -4,9 +4,6 @@ import { useMemo, useState } from "react";
 import { Countdown } from "@/components/Countdown";
 import { gameLabel } from "@/lib/scoring";
 import {
-  buzzPress,
-  setGuess,
-  setHint,
   setStorySentence,
   setStoryVote,
   setTenText,
@@ -26,8 +23,6 @@ type Props = {
 export function PlayerScreen({ roomId, room, playerId }: Props) {
   const me = room.players.find((p) => p.id === playerId);
   const gid = GAME_ORDER[room.roundIndex];
-  const [hint, setHintLocal] = useState("");
-  const [guess, setGuessLocal] = useState("");
   const [stmts, setStmts] = useState<[string, string, string]>(["", "", ""]);
   const [falseIx, setFalseIx] = useState(1);
   const [ten, setTen] = useState("");
@@ -38,8 +33,6 @@ export function PlayerScreen({ roomId, room, playerId }: Props) {
   const myVote = room.gameData.votes?.[playerId];
   const myTf = room.gameData.tfAnswers?.[playerId];
   const myStoryVote = room.gameData.storyVotes?.[playerId];
-  const buzzN = room.gameData.buzzN ?? 0;
-
   const turnPid = useMemo(() => {
     const o = room.gameData.storyOrder;
     const t = room.gameData.storyTurn ?? 0;
@@ -107,53 +100,6 @@ export function PlayerScreen({ roomId, room, playerId }: Props) {
           {myVote ? (
             <p className="text-center text-emerald-300">נשמר — בחירה טובה.</p>
           ) : null}
-        </section>
-      )}
-
-      {room.step === "playing" && gid === "draw_guess" && (
-        <section className="mt-8 space-y-4">
-          <h2 className="text-2xl font-black">{gameLabel("draw_guess")}</h2>
-          {room.gameData.drawerId === playerId ? (
-            <>
-              <p className="text-violet-100/90">תן רמז (בלי לרמות עם המילה!).</p>
-              <input
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-lg outline-none ring-fuchsia-400 focus:ring-2"
-                value={hint}
-                onChange={(e) => setHintLocal(e.target.value)}
-                placeholder="הרמז שלך…"
-              />
-              <button
-                type="button"
-                className="w-full rounded-2xl bg-fuchsia-500 py-4 text-lg font-bold text-white disabled:opacity-40"
-                disabled={room.gameData.sub !== "hint" || !hint.trim()}
-                onClick={() => void setHint(roomId, hint.trim())}
-              >
-                שלח רמז
-              </button>
-            </>
-          ) : (
-            <>
-              <p className="text-sm text-violet-300">רמז</p>
-              <p className="text-2xl font-semibold">{room.gameData.hint || "מחכים לרמז…"}</p>
-              <input
-                className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-emerald-400"
-                value={guess}
-                onChange={(e) => setGuessLocal(e.target.value)}
-                placeholder="הניחוש שלך"
-              />
-              <button
-                type="button"
-                className="w-full rounded-2xl bg-emerald-500 py-4 text-lg font-bold text-emerald-950 disabled:opacity-40"
-                disabled={room.gameData.sub !== "guess" || !guess.trim()}
-                onClick={() => void setGuess(roomId, playerId, guess.trim())}
-              >
-                שלח ניחוש
-              </button>
-              {room.gameData.guesses?.[playerId] ? (
-                <p className="text-center text-emerald-300">נשלח</p>
-              ) : null}
-            </>
-          )}
         </section>
       )}
 
@@ -228,33 +174,6 @@ export function PlayerScreen({ roomId, room, playerId }: Props) {
               {myTf !== undefined ? <p className="text-emerald-300">התשובה נשמרה.</p> : null}
             </>
           )}
-        </section>
-      )}
-
-      {room.step === "playing" && gid === "buzz" && (
-        <section className="mt-10 flex flex-col items-center text-center">
-          <h2 className="text-2xl font-black">{gameLabel("buzz")}</h2>
-          <p
-            className={`mt-6 text-8xl font-black tabular-nums ${
-              buzzN % 7 === 0 ? "text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.7)]" : "text-white"
-            }`}
-          >
-            {buzzN}
-          </p>
-          <p className="mt-4 max-w-sm text-sm text-violet-200">
-            לחץ רק כשהמספר מתחלק ב־7. לחיצה אחת. הניחוש הנכון האחרון מנצח.
-          </p>
-          <button
-            type="button"
-            disabled={!!room.gameData.buzzPresses?.[playerId] || room.gameData.sub !== "run"}
-            onClick={() => void buzzPress(roomId, playerId, buzzN)}
-            className="mt-8 w-full max-w-sm rounded-full bg-gradient-to-r from-orange-500 to-pink-500 py-6 text-2xl font-black text-white shadow-lg disabled:opacity-40"
-          >
-            באז׳
-          </button>
-          {room.gameData.buzzPresses?.[playerId] ? (
-            <p className="mt-4 text-emerald-300">ננעל על {room.gameData.buzzPresses[playerId].n}</p>
-          ) : null}
         </section>
       )}
 
