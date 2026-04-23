@@ -84,62 +84,71 @@ export default function Home() {
           </p>
         </div>
 
+        {/* Join first (phones), then Host (TV) — order fixed in DOM + flex (see #join-room / #host-tv) */}
+        <div className="flex w-full flex-col gap-10">
+          <section
+            id="join-room"
+            className="order-1 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur"
+          >
+            <h2 className="text-xl font-bold text-emerald-200">Join (phone)</h2>
+            <p className="mt-1 text-sm text-violet-200/80">Enter the code from the TV.</p>
+            <input
+              className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-lg font-mono tracking-widest outline-none focus:ring-2 focus:ring-emerald-400"
+              placeholder="Room code"
+              inputMode="numeric"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              disabled={!configured || busy !== null}
+            />
+            <input
+              className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-emerald-400"
+              placeholder="Your nickname"
+              value={joinNick}
+              onChange={(e) => setJoinNick(e.target.value)}
+              disabled={!configured || busy !== null}
+            />
+            <button
+              type="button"
+              className="mt-3 w-full rounded-2xl bg-emerald-500 py-4 text-lg font-bold text-emerald-950 disabled:opacity-40"
+              onClick={() => void onJoin()}
+              disabled={!configured || busy !== null}
+            >
+              {busy === "join" ? "Joining…" : "Join room"}
+            </button>
+          </section>
+
+          <section
+            id="host-tv"
+            className="order-2 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur"
+          >
+            <h2 className="text-xl font-bold text-fuchsia-200">Host (TV)</h2>
+            <p className="mt-1 text-sm text-violet-200/80">Create a room, then open this page on the big screen.</p>
+            <input
+              className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-fuchsia-400"
+              placeholder="Your nickname"
+              value={nick}
+              onChange={(e) => setNick(e.target.value)}
+              disabled={!configured || busy !== null}
+            />
+            <button
+              type="button"
+              className="mt-3 w-full rounded-2xl bg-gradient-to-r from-fuchsia-500 to-violet-500 py-4 text-lg font-bold shadow-lg shadow-fuchsia-500/25 disabled:opacity-40"
+              onClick={() => void onCreate()}
+              disabled={!configured || busy !== null}
+            >
+              {busy === "create" ? "Creating room…" : "Create room"}
+            </button>
+          </section>
+        </div>
+
         {!configured ? (
           <>
             <FirebaseMissing locale="en" />
             <p className="text-center text-sm text-amber-200/90">
-              Until Firebase is configured, the buttons below stay disabled.
+              Until Firebase is configured, the buttons above stay disabled.
             </p>
           </>
         ) : null}
-
-        <section className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-          <h2 className="text-xl font-bold text-fuchsia-200">Host (TV)</h2>
-          <p className="mt-1 text-sm text-violet-200/80">Create a room, then open this page on the big screen.</p>
-          <input
-            className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-fuchsia-400"
-            placeholder="Your nickname"
-            value={nick}
-            onChange={(e) => setNick(e.target.value)}
-            disabled={!configured || busy !== null}
-          />
-          <button
-            type="button"
-            className="mt-3 w-full rounded-2xl bg-gradient-to-r from-fuchsia-500 to-violet-500 py-4 text-lg font-bold shadow-lg shadow-fuchsia-500/25 disabled:opacity-40"
-            onClick={() => void onCreate()}
-            disabled={!configured || busy !== null}
-          >
-            {busy === "create" ? "Creating room…" : "Create room"}
-          </button>
-        </section>
-
-        <section className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-          <h2 className="text-xl font-bold text-emerald-200">Join (phone)</h2>
-          <p className="mt-1 text-sm text-violet-200/80">Enter the code from the TV.</p>
-          <input
-            className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-lg font-mono tracking-widest outline-none focus:ring-2 focus:ring-emerald-400"
-            placeholder="Room code"
-            inputMode="numeric"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            disabled={!configured || busy !== null}
-          />
-          <input
-            className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-emerald-400"
-            placeholder="Your nickname"
-            value={joinNick}
-            onChange={(e) => setJoinNick(e.target.value)}
-            disabled={!configured || busy !== null}
-          />
-          <button
-            type="button"
-            className="mt-3 w-full rounded-2xl bg-emerald-500 py-4 text-lg font-bold text-emerald-950 disabled:opacity-40"
-            onClick={() => void onJoin()}
-            disabled={!configured || busy !== null}
-          >
-            {busy === "join" ? "Joining…" : "Join room"}
-          </button>
-        </section>
 
         {err ? (
           <p className="text-center text-sm text-red-300" role="alert">
